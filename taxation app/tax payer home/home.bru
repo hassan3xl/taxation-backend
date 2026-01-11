@@ -1,0 +1,26 @@
+meta {
+  name: home
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:8000/api/taxations/my-vehicles/
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwNjY5MjQ2LCJpYXQiOjE3NjgwNzcyNDYsImp0aSI6IjQ2NjQxYmYxNjJjMjRhNGZiMDQ3N2NiZjZhZTQ3OTcwIiwidXNlcl9pZCI6IjQ1ZTEwYzQyLWI0NDEtNDA4ZC1iZjQ0LTczYmNmMmE1OGVhNiJ9.SswLaloUI0j6raR6bPYOr6ndMUYoMqQeecSDhJqO7TI
+}
+
+body:json {
+  {
+    
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

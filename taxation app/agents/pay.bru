@@ -1,0 +1,20 @@
+meta {
+  name: pay
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8000/api/taxations/agent/payments/
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwNjYyNjY1LCJpYXQiOjE3NjgwNzA2NjUsImp0aSI6IjFmNjZlNzJlZjE4ZDQ5ZjJiYmNjZWVkZDY5Y2Y4Y2NhIiwidXNlcl9pZCI6IjQ1ZTEwYzQyLWI0NDEtNDA4ZC1iZjQ0LTczYmNmMmE1OGVhNiJ9.Iyx01Ux_o8dvj1gyT_V0YqHxiGocEG9JodqgKQDHOHQ
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

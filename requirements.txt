@@ -1,0 +1,42 @@
+
+django-extensions>=3.2.3
+
+
+python-dotenv
+django
+pillow
+
+
+djangorestframework
+djangorestframework-simplejwt
+
+dj-rest-auth
+
+# django-allauth
+# django-allauth[socialaccount]
+
+django-cors-headers
+dj-database-url
+psycopg
+python-decouple
+whitenoise
+gunicorn
+drf-nested-routers
+
+# storage
+cloudinary 
+django-cloudinary-storage 
+
+# cathing
+django-redis
+
+celery
+eventlet # Needed for Windows users, but good for stability in some Docker setups
+django-debug-toolbar
+
+# testing
+pytest
+pytest-django
+
+Pillow
+qrcode[pil]

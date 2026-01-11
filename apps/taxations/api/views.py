@@ -1,0 +1,209 @@
+from rest_framework import (
+    viewsets, 
+    status, 
+    filters, 
+    generics, 
+    permissions
+)
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+
+from rest_framework.views import APIView
+from rest_framework import status
+from apps.users.models import  TaxPayer
+import random
+from utils.permissions import (
+    IsAgent, 
+    IsTaxPayer
+)
+from apps.taxations.models import(
+    Vehicle, 
+    Payment
+)
+from .serializers import (
+    PaymentSerializer, 
+    AgentVehicleSerializer,
+    TaxpayerVehicleSerializer
+)
+
+class TaxpayerVehicleListView(generics.ListAPIView):
+    """
+    Returns a list of ALL vehicles owned by the currently logged-in TaxPayer.
+    """
+    serializer_class = TaxpayerVehicleSerializer
+    permission_classes = [IsTaxPayer]
+    
+    def get_queryset(self):
+        # 1. Get the TaxPayer profile associated with the logged-in User
+        taxpayer = get_object_or_404(TaxPayer, user=self.request.user)
+        # 2. Return all vehicles linked to this TaxPayer
+        return Vehicle.objects.filter(owner=taxpayer).order_by('-created_at')
+
+
+# --- AGENT VIEWS ---
+
+class AgentVehicleViewSet(viewsets.ModelViewSet):
+    queryset = Vehicle.objects.all().order_by('-registration_date')
+    serializer_class = AgentVehicleSerializer
+    permission_classes = [IsAgent]
+    
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['plate_number', 'phone_number']
+    lookup_field = 'plate_number' 
+
+    @action(detail=True, methods=['post'])
+    def pay(self, request, plate_number=None):
+
+        vehicle = self.get_object()
+        
+        amount = request.data.get('amount')
+        agent_id = request.user
+        
+        if not amount:
+            return Response({"error": "Amount is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Record the payment
+        Payment.objects.create(
+            vehicle=vehicle,
+            amount=amount,
+            payment_method='agent',
+            collected_by=agent_id,
+            notes=f"Collected manually via Agent App"
+        )
+
+        # Return updated vehicle data (so the frontend updates the balance instantly)
+        serializer = self.get_serializer(vehicle)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['post'])
+    def activate(self, request, plate_number=None):
+        vehicle = self.get_object()
+        vehicle.is_active = True
+        vehicle.save()
+        return Response({"message": "Vehicle activated successfully."}, status=status.HTTP_200_OK)
+
+class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Payment.objects.all().order_by('-timestamp')
+    serializer_class = PaymentSerializer
+
+
+# Mock function for sending SMS (Replace with Twilio/Termii/KudiSMS later)
+def send_sms_otp(phone, otp):
+    print(f"--- SENDING OTP {otp} TO {phone} ---")
+    return True
+
+class ClaimProfileView(APIView):
+    permission_classes = [IsTaxPayer]
+    def get(self, request, plate_number):
+        plate_number = plate_number.upper().strip()
+        
+        # 1. Find the vehicle
+        try:
+            vehicle = Vehicle.objects.get(plate_number=plate_number)
+        except Vehicle.DoesNotExist:
+            return Response(
+                {"error": "Vehicle not found in Ministry database."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 2. Check: Has this vehicle already been claimed by a generic User?
+        if vehicle.owner is not None:
+            # If the logged-in user already owns it
+            if vehicle.owner.user == request.user:
+                return Response({"message": "You already own this vehicle."})
+            
+            # If someone else owns it
+            return Response(
+                {"error": "This vehicle has already been claimed by another user."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 3. Handle "Ghost" Vehicles (Data uploaded but no owner linked yet)
+        # We verify using the Ministry Data stored on the vehicle itself
+        
+        if not vehicle.phone_number:
+            return Response(
+                {"error": "This vehicle exists but has no contact info for verification. Please visit our office."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        masked_phone = f"{vehicle.phone_number[:4]}****{vehicle.phone_number[-3:]}"
+        masked_name = f"{vehicle.owner_name.split()[0]} ***"
+
+        return Response({
+            "found": True,
+            "plate_number": vehicle.plate_number,
+            "masked_owner": masked_name,
+            "masked_phone": masked_phone,
+            "vehicle_id": vehicle.id,
+            "status":vehicle.is_active,
+            "message": "Vehicle found. Send OTP to verify ownership?"
+        })
+
+class RequestOTPView(APIView):
+    permission_classes = [IsTaxPayer]
+
+    def post(self, request):
+        vehicle_id = request.data.get("vehicle_id")
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+        tax_payer = vehicle.owner
+
+        # Generate 6 digit OTP
+        otp = str(random.randint(100000, 999999))
+        print(f"--- OTP: {otp} ---")
+        
+        # Store OTP in session or Redis (Simple session usage here)
+        # In production, use Redis with a 5-minute expiry
+        request.session['verification_otp'] = otp
+        request.session['verification_vehicle_id'] = str(vehicle.id)
+        request.session.set_expiry(300) # 5 minutes
+
+        # Send SMS to the database phone, NOT the user input phone
+        send_sms_otp(vehicle.phone_number, otp)
+
+        return Response({"message": "OTP sent to your registered phone number."})
+
+
+class VerifyOTPView(APIView):
+    permission_classes = [IsTaxPayer]
+    
+    def post(self, request):
+        user_otp = request.data.get("otp")
+        session_otp = request.session.get('verification_otp')
+        vehicle_id_session = request.session.get('verification_vehicle_id')
+
+        # 1. Validate OTP
+        if not session_otp or user_otp != session_otp:
+            return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Get the Vehicle
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id_session)
+
+        # 3. Get the TaxPayer Profile for the current User
+        # We use get_or_create to be safe, in case the signal didn't run earlier
+        tax_payer_profile, created = TaxPayer.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'full_name': f"{request.user.first_name} {request.user.last_name}",
+                'phone': vehicle.phone_number, # Autofill phone from vehicle if creating new
+            }
+        )
+
+        # 4. Link the Vehicle to the TaxPayer (NOT the User directly)
+        vehicle.owner = tax_payer_profile
+        vehicle.save()
+        
+        # Optional: Sync details if the profile was empty
+        if not tax_payer_profile.phone and vehicle.phone_number:
+            tax_payer_profile.phone = vehicle.phone_number
+            tax_payer_profile.save()
+
+        # Cleanup Session
+        del request.session['verification_otp']
+        del request.session['verification_vehicle_id']
+
+        return Response({
+            "success": True, 
+            "message": "Account successfully linked! You can now pay taxes."
+        })

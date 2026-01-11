@@ -1,0 +1,20 @@
+meta {
+  name: claim
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8000/api/taxations/claim/AD-1234/
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcwNjMzMDc4LCJpYXQiOjE3NjgwNDEwNzgsImp0aSI6ImFjNTg5ZTE4ZDlhZjQ1NzE5NTg2YmM2OWE2NjFkYjEwIiwidXNlcl9pZCI6IjQxYzFlMGMzLWU2MGQtNDYyZC1hNjkxLWFjODc4OWFiMDAzYiJ9.maJBTkyAzQgFzHbE5ErdoISzqDkN8ZZ1UtTFQjugleU
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

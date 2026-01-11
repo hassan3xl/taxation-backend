@@ -1,0 +1,48 @@
+meta {
+  name: signUp
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:8000/api/auth/register/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  // {
+  // //   "username":"username",
+  //   "email":"elhassanehussaine@dev.com",
+  //   "password":"Smokio@123",
+  //   "password2":"Smokio@123"
+  // }
+  
+  
+  // {
+  // //   "username":"username",
+  //   "email":"driver@dev.com",
+  //   "password":"Smokio@123",
+  //   "password2":"Smokio@123"
+  // }
+  
+  
+  // {
+  // //   "username":"username",
+  //   "email":"agent@dev.com",
+  //   "password":"Smokio@123",
+  //   "password2":"Smokio@123"
+  // }
+  
+  {
+  //   "username":"username",
+    "email":"taxpayer2@gmail.com",
+    "password":"Smokio@123",
+    "password2":"Smokio@123"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
