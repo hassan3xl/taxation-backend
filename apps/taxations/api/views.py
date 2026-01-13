@@ -23,8 +23,8 @@ from apps.taxations.models import(
 )
 from .serializers import (
     PaymentSerializer, 
-    AgentVehicleSerializer,
-    TaxpayerVehicleSerializer
+    AgentAndAdminVehicleSerializer,
+    TaxpayerVehicleSerializer,
 )
 
 class TaxpayerVehicleListView(generics.ListAPIView):
@@ -41,11 +41,18 @@ class TaxpayerVehicleListView(generics.ListAPIView):
         return Vehicle.objects.filter(owner=taxpayer).order_by('-created_at')
 
 
-# --- AGENT VIEWS ---
+class PublicVehicleViews(viewsets.ModelViewSet):
+    queryset = Vehicle.objects.all().order_by('-created_at')
+    serializer_class = AgentAndAdminVehicleSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['plate_number', 'phone_number']
+    lookup_field = 'plate_number' 
 
 class AgentVehicleViewSet(viewsets.ModelViewSet):
-    queryset = Vehicle.objects.all().order_by('-registration_date')
-    serializer_class = AgentVehicleSerializer
+    queryset = Vehicle.objects.all().order_by('-created_at')
+    serializer_class = AgentAndAdminVehicleSerializer
     permission_classes = [IsAgent]
     
     filter_backends = [filters.SearchFilter]
@@ -75,13 +82,7 @@ class AgentVehicleViewSet(viewsets.ModelViewSet):
         # Return updated vehicle data (so the frontend updates the balance instantly)
         serializer = self.get_serializer(vehicle)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    @action(detail=True, methods=['post'])
-    def activate(self, request, plate_number=None):
-        vehicle = self.get_object()
-        vehicle.is_active = True
-        vehicle.save()
-        return Response({"message": "Vehicle activated successfully."}, status=status.HTTP_200_OK)
+        
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Payment.objects.all().order_by('-timestamp')
@@ -95,41 +96,54 @@ def send_sms_otp(phone, otp):
 
 class ClaimProfileView(APIView):
     permission_classes = [IsTaxPayer]
+    
     def get(self, request, plate_number):
         plate_number = plate_number.upper().strip()
         
-        # 1. Find the vehicle
+        # --- CHECK 1: Does THIS user already have a vehicle? ---
+        # Assuming your TaxPayer model is linked to User, and Vehicle is linked to TaxPayer
+        # Adjust 'taxpayer' to whatever related_name you use (e.g., request.user.taxpayer_profile)
+        try:
+            current_taxpayer = request.user.taxpayer 
+            if hasattr(current_taxpayer, 'vehicle') and current_taxpayer.vehicle:
+                return Response(
+                    {"error": "You have already linked a vehicle to this account. You cannot own more than one."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except AttributeError:
+            # Handle case where user might not be set up correctly as a taxpayer yet
+            pass
+
+        # --- CHECK 2: Find the vehicle ---
         try:
             vehicle = Vehicle.objects.get(plate_number=plate_number)
         except Vehicle.DoesNotExist:
             return Response(
-                {"error": "Vehicle not found in Ministry database."}, 
+                {"error": "Vehicle not found. Please check the plate number."}, 
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # 2. Check: Has this vehicle already been claimed by a generic User?
+        # --- CHECK 3: Is the vehicle already owned? ---
         if vehicle.owner is not None:
-            # If the logged-in user already owns it
-            if vehicle.owner.user == request.user:
-                return Response({"message": "You already own this vehicle."})
-            
-            # If someone else owns it
+            # Whether it's the current user OR another user, in the context of "Claiming",
+            # this is an error. We do not want to return 200 OK here.
             return Response(
-                {"error": "This vehicle has already been claimed by another user."}, 
+                {"error": "This vehicle has already been claimed."}, 
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # 3. Handle "Ghost" Vehicles (Data uploaded but no owner linked yet)
-        # We verify using the Ministry Data stored on the vehicle itself
-        
+        # --- CHECK 4: "Ghost" Vehicles (No phone number to verify with) ---
         if not vehicle.phone_number:
             return Response(
-                {"error": "This vehicle exists but has no contact info for verification. Please visit our office."}, 
+                {"error": "Vehicle exists but has no contact info. Visit our office to update details."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Success Response
         masked_phone = f"{vehicle.phone_number[:4]}****{vehicle.phone_number[-3:]}"
-        masked_name = f"{vehicle.owner_name.split()[0]} ***"
+        # safe split in case name is single word
+        name_parts = vehicle.owner_name.split()
+        masked_name = f"{name_parts[0]} ***" if name_parts else "***"
 
         return Response({
             "found": True,
@@ -137,10 +151,13 @@ class ClaimProfileView(APIView):
             "masked_owner": masked_name,
             "masked_phone": masked_phone,
             "vehicle_id": vehicle.id,
-            "status":vehicle.is_active,
-            "message": "Vehicle found. Send OTP to verify ownership?"
-        })
+            "status": vehicle.is_active,
+            "make": vehicle.make, # Ensure you send these if frontend uses them
+            "model": vehicle.model,
+            "message": "Vehicle found."
+        }, status=status.HTTP_200_OK)
 
+    
 class RequestOTPView(APIView):
     permission_classes = [IsTaxPayer]
 

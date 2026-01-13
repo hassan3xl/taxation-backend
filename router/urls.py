@@ -10,6 +10,8 @@ urlpatterns = [
     path('profile/', include(users_urls)),
     # operators 
     path('taxations/', include('apps.taxations.api.urls')),
+    path('admin/', include('apps.admins.urls')),
+
 
 
 ]

@@ -1,5 +1,5 @@
 from .serializers import (
-    AgentVehicleSerializer,
+    AgentAndAdminVehicleSerializer,
     TaxpayerVehicleSerializer,
     PaymentSerializer
 )

@@ -40,3 +40,5 @@ pytest-django
 
 Pillow
 qrcode[pil]
+cloudinary 
+django-cloudinary-storage 

@@ -11,6 +11,31 @@ class IsAgent(permissions.BasePermission):
         
         # 2. User must be an AGENT or an ADMIN (Superusers always get access)
         return request.user.role == 'agent' or request.user.is_superuser
+    
+
+class IsAdmin(permissions.BasePermission):
+    """
+    Allows access only to users with the role 'admin' (or Admins).
+    """
+    def has_permission(self, request, view):
+        # 1. User must be logged in
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # 2. User must be an AGENT or an ADMIN (Superusers always get access)
+        return request.user.role == 'admin' or request.user.is_superuser
+    
+class IsAdminOrAgent(permissions.BasePermission):
+    """
+    Allows access only to users with the role 'admin' (or Admins).
+    """
+    def has_permission(self, request, view):
+        # 1. User must be logged in
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # 2. User must be an AGENT or an ADMIN (Superusers always get access)
+        return request.user.role == 'admin' or request.user.role == 'agent' or request.user.is_superuser
 
 class IsTaxPayer(permissions.BasePermission):
     """

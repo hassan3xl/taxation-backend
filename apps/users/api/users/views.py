@@ -35,5 +35,5 @@ class AgentProfileView(generics.RetrieveAPIView):
 
     def get_object(self):
         agent = get_object_or_404(Agent, user=self.request.user)
-        return agent
+        print("hellos agent", agent)
 

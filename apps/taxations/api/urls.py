@@ -7,14 +7,17 @@ from .views import (
     RequestOTPView, 
     VerifyOTPView,
     TaxpayerVehicleListView,
+    PublicVehicleViews
+    
 )
 
 agent_router = DefaultRouter()
 agent_router.register(r'vehicles', AgentVehicleViewSet, basename='agent-vehicles')
 agent_router.register(r'payments', PaymentViewSet)
+agent_router.register(r'public', PublicVehicleViews)
+
 
 urlpatterns = [
-    path('agent/', include(agent_router.urls)),
 
     path('my-vehicles/', TaxpayerVehicleListView.as_view(), name='my-vehicles'),
 
@@ -28,3 +31,6 @@ urlpatterns = [
     path('claim/<str:plate_number>/', ClaimProfileView.as_view(), name='claim-profile'),
 ]
 
+urlpatterns += [
+    path('agent/', include(agent_router.urls)),
+]

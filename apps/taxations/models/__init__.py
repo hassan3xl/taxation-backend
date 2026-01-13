@@ -1,5 +1,6 @@
 from .taxations import (
     Vehicle,
-    Payment
+    Payment,
+    VehicleExemption
     
 )
