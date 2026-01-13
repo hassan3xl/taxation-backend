@@ -43,12 +43,32 @@ class TaxpayerVehicleListView(generics.ListAPIView):
 
 class PublicVehicleViews(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
-    serializer_class = AgentAndAdminVehicleSerializer
+    serializer_class = TaxpayerVehicleSerializer
     permission_classes = [permissions.AllowAny]
     
     filter_backends = [filters.SearchFilter]
     search_fields = ['plate_number', 'phone_number']
     lookup_field = 'plate_number' 
+
+    def retrieve(self, request, *args, **kwargs):
+        vehicle = get_object_or_404(
+            Vehicle,
+            plate_number__iexact=kwargs[self.lookup_field]
+        )
+
+        if not vehicle.is_active:
+            return Response(
+                {
+                    "detail": "This vehicle is currently inactive.",
+                    "code": "VEHICLE_INACTIVE"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = self.get_serializer(vehicle)
+        return Response(serializer.data)
+
+
 
 class AgentVehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
@@ -58,6 +78,32 @@ class AgentVehicleViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['plate_number', 'phone_number']
     lookup_field = 'plate_number' 
+
+    def retrieve(self, request, *args, **kwargs):
+        vehicle = get_object_or_404(
+            Vehicle,
+            plate_number__iexact=kwargs[self.lookup_field]
+        )
+
+        if not vehicle.is_active:
+            return Response(
+                {
+                    "detail": "This vehicle is currently inactive.",
+                    "code": "VEHICLE_INACTIVE"
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = self.get_serializer(vehicle)
+        return Response(serializer.data)
+
+    # modify the vehicle the creation and  make status true if admin created else false
+    def perform_create(self, serializer):
+        if self.request.user.role == 'agent':
+            serializer.save(is_active=False)
+        else:
+            serializer.save(is_active=True)
+
 
     @action(detail=True, methods=['post'])
     def pay(self, request, plate_number=None):

@@ -34,7 +34,7 @@ class TaxpayerVehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'plate_number', "owner", 'owner_name', 'phone_number', 
+            'id', 'plate_number', "owner", 'owner_name', 'phone_number', 'qr_code',
             'is_active', 'created_at',
             'current_balance', 'daily_rate',
             'compliance_status',  # <--- Critical for frontend logic
@@ -44,6 +44,9 @@ class TaxpayerVehicleSerializer(serializers.ModelSerializer):
     def get_recent_payments(self, obj):
         payments = obj.payments.order_by('-timestamp')[:5] # Increased to 5 for better context
         return PaymentSerializer(payments, many=True).data
+
+    def qr_code(self, obj):
+        return obj.qr_code.url if obj.qr_code else None
 
 
 # --- 4. Agent/Admin Vehicle Serializer (For the Dashboard) ---
@@ -94,3 +97,4 @@ class AgentAndAdminVehicleSerializer(serializers.ModelSerializer):
                 "end_date": exemption.end_date
             }
         return None
+    
