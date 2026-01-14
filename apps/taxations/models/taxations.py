@@ -29,14 +29,21 @@ class Vehicle(models.Model):
     # This field handles the "Soft" delete or permanent ban
     # If they are just owing money, this stays True, but we flag them visually
     is_active = models.BooleanField(default=True)
+    is_approved_by_admin = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+
 
     def __str__(self):
         return f"{self.plate_number} - {self.owner_name}"
 
     def save(self, *args, **kwargs):
         self.plate_number = self.plate_number.upper().strip()
+
+        # Detect activation moment
+        if self.is_active and self.is_approved_by_admin and self.activated_at is None:
+            self.activated_at = timezone.now()
 
         if not self.qr_code:
             qr_image = qrcode.make(self.plate_number).convert("RGB")
@@ -63,28 +70,23 @@ class Vehicle(models.Model):
 
 
     @property
-    def days_since_registration(self):
+    def days_since_activation(self):
         """
-        Calculates calendar days active with Late Registration Forgiveness.
+        Calculates calendar days since vehicle became active.
         """
-        # 1. Get simple dates (ignores hours/minutes)
+        if not self.activated_at:
+            return 0
+
         today = timezone.now().date()
-        created_date = self.created_at.date()
-        
-        # 2. Calculate raw calendar days (Jan 13 - Jan 12 = 1 day)
-        delta = today - created_date
-        days_active = delta.days + 1  # Add 1 to include today
-        
-        # 3. Late Registration Check (Grace Period)
-        # If they registered after 4 PM (16:00), we don't bill the first day.
-        # We check the hour of created_at (in local time ideally, or UTC if that's your setup)
-        # Note: timezone.localtime ensures we check the hour in Nigeria time, not UTC
-        registration_hour = timezone.localtime(self.created_at).hour
-        
-        if registration_hour >= 16: # 16:00 is 4 PM
+        activation_date = self.activated_at.date()
+
+        delta = today - activation_date
+        days_active = delta.days + 1  # include today
+
+        activation_hour = timezone.localtime(self.activated_at).hour
+        if activation_hour >= 16:
             days_active -= 1
-            
-        # Ensure we never return negative days (e.g. if registered tonight at 8 PM)
+
         return max(days_active, 0)
 
     @property
@@ -113,7 +115,7 @@ class Vehicle(models.Model):
             return 0
             
         # Use the smart logic above
-        chargeable_days = self.days_since_registration - self.exempted_days_count
+        chargeable_days = self.days_since_activation - self.exempted_days_count
         
         # Safety check to prevent negative bills
         chargeable_days = max(chargeable_days, 0)

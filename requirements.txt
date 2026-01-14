@@ -42,3 +42,4 @@ Pillow
 qrcode[pil]
 cloudinary 
 django-cloudinary-storage 
+django-filter

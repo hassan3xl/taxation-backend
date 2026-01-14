@@ -100,9 +100,9 @@ class AgentVehicleViewSet(viewsets.ModelViewSet):
     # modify the vehicle the creation and  make status true if admin created else false
     def perform_create(self, serializer):
         if self.request.user.role == 'agent':
-            serializer.save(is_active=False)
+            serializer.save(is_active=False, is_approved_by_admin=False)
         else:
-            serializer.save(is_active=True)
+            serializer.save(is_active=True, is_approved_by_admin=True)
 
 
     @action(detail=True, methods=['post'])

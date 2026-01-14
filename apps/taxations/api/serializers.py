@@ -37,7 +37,7 @@ class TaxpayerVehicleSerializer(serializers.ModelSerializer):
             'id', 'plate_number', "owner", 'owner_name', 'phone_number', 'qr_code',
             'is_active', 'created_at',
             'current_balance', 'daily_rate',
-            'compliance_status',  # <--- Critical for frontend logic
+            'compliance_status', 
             'recent_payments'
         ]
 
@@ -65,7 +65,7 @@ class AgentAndAdminVehicleSerializer(serializers.ModelSerializer):
         model = Vehicle
         fields = [
             'id', 'plate_number', 'owner_name', 'phone_number', 
-            'created_at', 'is_active', 
+            'created_at', 'is_active', 'is_approved_by_admin', 'activated_at', 
             'current_balance', 'total_paid', 'total_expected_revenue',
             'daily_rate', 'compliance_status', 'exempted_days_count',
             'active_exemption',

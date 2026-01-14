@@ -9,7 +9,8 @@ from rest_framework import (
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-
+from rest_framework import generics, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.views import APIView
 from rest_framework import status
 from apps.users.models import  (
@@ -30,9 +31,16 @@ from apps.taxations.models import(
 from .serializers import (
     PaymentSerializer,
     AgentAndAdminVehicleSerializer, 
-    TaxPayerSerializer,
-    CreateVehicleSerializer
+    CreateVehicleSerializer,
+    VehicleFinanceSerializer
 )
+
+
+class UsersViewset(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all().order_by('-created_at')
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAdmin]
+
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
@@ -41,24 +49,125 @@ class VehicleViewSet(viewsets.ModelViewSet):
     
     filter_backends = [filters.SearchFilter]
     search_fields = ['plate_number', 'phone_number']
-    lookup_field = 'plate_number'         
+    lookup_field = 'plate_number'      
 
-class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Payment.objects.all().order_by('-timestamp')
+    def perform_create(self, serializer):
+        serializer.save(is_active=True, is_approved_by_admin=True)
+
+    @action(detail=True, methods=['post'])
+    def approve_vehicle(self, request, id=None):  
+        vehicle = get_object_or_404(
+            Vehicle,
+            id=id
+        )
+
+        if vehicle.is_approved_by_admin:
+            return Response(
+                {"detail": "Vehicle is already approved."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        vehicle.is_approved_by_admin = True
+        vehicle.is_active = True  
+        vehicle.save()
+
+        return Response(
+            {"detail": "Vehicle has been approved successfully."},
+            status=status.HTTP_200_OK
+        )
+
+
+class AdminVehicleFinanceListView(generics.ListAPIView):
+    serializer_class = VehicleFinanceSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        qs = Vehicle.objects.all()
+
+        status = self.request.query_params.get("status")
+
+        if status == "owing":
+            qs = [v for v in qs if v.compliance_status == "OWING"]
+        elif status == "inactive":
+            qs = [v for v in qs if v.compliance_status == "INACTIVE_DUE_TO_DEBT"]
+        elif status == "active":
+            qs = [v for v in qs if v.compliance_status == "ACTIVE"]
+
+        return qs
+
+from django.db.models import Sum
+class AdminFinanceDashboardView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        total_collected = Payment.objects.aggregate(
+            total=Sum("amount")
+        )["total"] or 0
+
+        vehicles = Vehicle.objects.all()
+
+        total_expected = sum(v.total_expected_revenue for v in vehicles)
+        total_paid = sum(v.total_paid for v in vehicles)
+
+        total_outstanding = total_expected - total_paid
+
+        return Response({
+            "total_collected": total_collected,
+            "total_expected": total_expected,
+            "total_outstanding": total_outstanding,
+        })
+
+class AdminPaymentListView(generics.ListAPIView):
+    queryset = Payment.objects.select_related("vehicle").order_by("-timestamp")
     serializer_class = PaymentSerializer
     permission_classes = [IsAdmin]
 
-class UsersViewset(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.all().order_by('-created_at')
-    serializer_class = UserProfileSerializer
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    filterset_fields = [
+        "payment_method",
+        "vehicle",
+        "collected_by",
+    ]
+
+    search_fields = [
+        "vehicle__plate_number",
+        "collected_by",
+    ]
+
+    ordering_fields = ["timestamp", "amount"]
+
+
+class AdminPaymentDetailView(generics.RetrieveAPIView):
+    queryset = Payment.objects.select_related("vehicle")
+    serializer_class = PaymentSerializer
     permission_classes = [IsAdmin]
 
-class TaxpayerViewset(viewsets.ReadOnlyModelViewSet):
-    queryset = TaxPayer.objects.all().order_by('-created_at')
-    serializer_class = TaxPayerSerializer
+
+class AdminPaymentUpdateView(generics.UpdateAPIView):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
     permission_classes = [IsAdmin]
 
 
-class AdminDashboard(APIView):
-    def get(self, serializer):
-        pass
+class AdminPaymentDeleteView(generics.DestroyAPIView):
+    queryset = Payment.objects.all()
+    permission_classes = [IsAdmin]
+
+# class AdminPaymentCreateView(generics.CreateAPIView):
+#     serializer_class = AdminPaymentCreateSerializer
+#     permission_classes = [IsAdmin]
+
+# class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+#     queryset = Payment.objects.all().order_by('-timestamp')
+#     serializer_class = PaymentSerializer
+#     permission_classes = [IsAdmin]
+
+# class TaxpayerViewset(viewsets.ReadOnlyModelViewSet):
+#     queryset = TaxPayer.objects.all().order_by('-created_at')
+#     serializer_class = TaxPayerSerializer
+#     permission_classes = [IsAdmin]
