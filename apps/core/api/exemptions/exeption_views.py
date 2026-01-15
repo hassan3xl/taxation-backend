@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from apps.taxations.models.taxations import Vehicle, VehicleExemption
+from apps.core.models import Vehicle, VehicleExemption
 from ..serializers import VehicleExemptionSerializer
 
 from utils.permissions import (

@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'dj_rest_auth',
     'corsheaders',
 
-    "apps.taxations.apps.TaxationsConfig",
+    "apps.core.apps.CoreConfig",
     "apps.users.apps.UsersConfig",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
@@ -137,6 +137,8 @@ REST_AUTH = {
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
+
+
 
 
 # ACCOUNT_USER_MODEL_USERNAME_FIELD = None  

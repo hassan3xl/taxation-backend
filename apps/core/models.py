@@ -177,22 +177,35 @@ class VehicleExemption(models.Model):
 
     def __str__(self):
         return f"{self.vehicle.plate_number} - {self.reason} ({self.start_date} to {self.end_date})"
-
-
     
 class Payment(models.Model):
     PAYMENT_METHODS = [
         ('agent', 'Agent Cash'),
         ('online', 'Online Payment'),
+        ('bank', 'Bank Transfer'),
+        ("ussd", "USSD Payment"),
     ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    vehicle = models.ForeignKey(Vehicle, related_name='payments', on_delete=models.CASCADE)
+    vehicle = models.ForeignKey("core.Vehicle", related_name='payments', on_delete=models.CASCADE)
+    driver = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='agent')
-    
-    # Track the agent if cash was collected
-    collected_by = models.CharField(max_length=100, blank=True, null=True, help_text="Agent ID if cash payment")
-    
+    refrence = models.CharField(max_length=100, blank=True, null=True)
+    # collected_by = models.CharField(max_length=100, blank=True, null=True, help_text="Agent ID if cash payment")
+    collected_by = models.ForeignKey(
+        "users.User", 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name="collected_payments"
+    ) 
+    payment_status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ], default='pending'
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
 

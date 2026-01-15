@@ -8,9 +8,11 @@ from apps.users.api.users import urls as users_urls
 urlpatterns = [
     path('auth/', include(auth_urls)),
     path('profile/', include(users_urls)),
-    # operators 
-    path('taxations/', include('apps.taxations.api.urls')),
+    path('driver/', include('apps.drivers.urls')),
     path('admin/', include('apps.admins.urls')),
+
+
+    path('core/', include('apps.core.api.urls')),
 
 
 

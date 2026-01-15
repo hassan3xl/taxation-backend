@@ -1,56 +1,47 @@
 from rest_framework import serializers
-from apps.taxations.models.taxations import Payment, Vehicle, VehicleExemption
+# from ..models import Vehicle, Payment
+from apps.core.models import Payment, Vehicle
+from apps.users.models import (
+    TaxPayer
+)
+from apps.core.api import (
+    AgentAndAdminVehicleSerializer
+)
 
-# --- 1. Exemption Serializer (For Sickness/Theft Reports) ---
-class VehicleExemptionSerializer(serializers.ModelSerializer):
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    reason_display = serializers.CharField(source='get_reason_display', read_only=True)
-
-    class Meta:
-        model = VehicleExemption
-        fields = [
-            'id', 'vehicle', 'start_date', 'end_date', 
-            'reason', 'reason_display', 'description', 
-            'is_approved', 'created_at'
-        ]
-        read_only_fields = ['is_approved', 'created_at']
-
-
-# --- 2. Payment Serializer ---
-class PaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Payment
-        fields = ['id', 'amount', 'payment_method', 'timestamp', 'notes']
-
-
-# --- 3. Taxpayer Vehicle Serializer (For the User App) ---
-class TaxpayerVehicleSerializer(serializers.ModelSerializer):
-    current_balance = serializers.FloatField(read_only=True)
-    compliance_status = serializers.ReadOnlyField() # The new 7-day rule status
-    daily_rate = serializers.FloatField(read_only=True)
-    
-    recent_payments = serializers.SerializerMethodField()
-
+class CreateVehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
+        fields = ['plate_number', 'owner_name', 'phone_number']
+
+
+class TaxPayerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaxPayer
+        fields = ["full_name", "phone", "address", "created_at", "updated_at"]
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    vehicle_plate = serializers.CharField(
+        source="vehicle.plate_number",
+        read_only=True
+    )
+
+    class Meta:
+        model = Payment
         fields = [
-            'id', 'plate_number', "owner", 'owner_name', 'phone_number', 'qr_code',
-            'is_active', 'created_at',
-            'current_balance', 'daily_rate',
-            'compliance_status', 
-            'recent_payments'
+            "id",
+            "vehicle",
+            "vehicle_plate",
+            "amount",
+            "payment_method",
+            "collected_by",
+            "timestamp",
+            "notes",
         ]
-
-    def get_recent_payments(self, obj):
-        payments = obj.payments.order_by('-timestamp')[:5] # Increased to 5 for better context
-        return PaymentSerializer(payments, many=True).data
-
-    def qr_code(self, obj):
-        return obj.qr_code.url if obj.qr_code else None
+        read_only_fields = ["id", "timestamp"]
 
 
-# --- 4. Agent/Admin Vehicle Serializer (For the Dashboard) ---
-class AgentAndAdminVehicleSerializer(serializers.ModelSerializer):
+class AgentVehicleSerializer(serializers.ModelSerializer):
     current_balance = serializers.FloatField(read_only=True)
     total_paid = serializers.FloatField(read_only=True)
     total_expected_revenue = serializers.FloatField(read_only=True)
@@ -97,4 +88,30 @@ class AgentAndAdminVehicleSerializer(serializers.ModelSerializer):
                 "end_date": exemption.end_date
             }
         return None
-    
+
+class VehicleFinanceSerializer(serializers.ModelSerializer):
+    total_expected_revenue = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
+    total_paid = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
+    current_balance = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
+    compliance_status = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Vehicle
+        fields = [
+            "id",
+            "plate_number",
+            "owner_name",
+            "phone_number",
+            "is_active",
+            "is_approved_by_admin",
+            "total_expected_revenue",
+            "total_paid",
+            "current_balance",
+            "compliance_status",
+        ]

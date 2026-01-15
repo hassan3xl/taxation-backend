@@ -11,8 +11,13 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from django.db.models import Sum, Count, F
+from django.db.models.functions import TruncDay, TruncMonth
+from django.utils import timezone
+from datetime import timedelta
 from apps.users.models import  (
     TaxPayer,
     User
@@ -24,15 +29,15 @@ from utils.permissions import (
     IsAdmin, 
     
 )
-from apps.taxations.models import(
+from apps.core.models import(
     Vehicle, 
     Payment
 )
 from .serializers import (
     PaymentSerializer,
-    AgentAndAdminVehicleSerializer, 
     CreateVehicleSerializer,
-    VehicleFinanceSerializer
+    VehicleFinanceSerializer,
+    AdminVehicleSerializer
 )
 
 
@@ -44,7 +49,7 @@ class UsersViewset(viewsets.ReadOnlyModelViewSet):
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
-    serializer_class = AgentAndAdminVehicleSerializer
+    serializer_class = AdminVehicleSerializer
     permission_classes = [IsAdmin]
     
     filter_backends = [filters.SearchFilter]
@@ -95,28 +100,6 @@ class AdminVehicleFinanceListView(generics.ListAPIView):
 
         return qs
 
-from django.db.models import Sum
-class AdminFinanceDashboardView(APIView):
-    permission_classes = [IsAdmin]
-
-    def get(self, request):
-        total_collected = Payment.objects.aggregate(
-            total=Sum("amount")
-        )["total"] or 0
-
-        vehicles = Vehicle.objects.all()
-
-        total_expected = sum(v.total_expected_revenue for v in vehicles)
-        total_paid = sum(v.total_paid for v in vehicles)
-
-        total_outstanding = total_expected - total_paid
-
-        return Response({
-            "total_collected": total_collected,
-            "total_expected": total_expected,
-            "total_outstanding": total_outstanding,
-        })
-
 class AdminPaymentListView(generics.ListAPIView):
     queryset = Payment.objects.select_related("vehicle").order_by("-timestamp")
     serializer_class = PaymentSerializer
@@ -158,16 +141,5 @@ class AdminPaymentDeleteView(generics.DestroyAPIView):
     queryset = Payment.objects.all()
     permission_classes = [IsAdmin]
 
-# class AdminPaymentCreateView(generics.CreateAPIView):
-#     serializer_class = AdminPaymentCreateSerializer
-#     permission_classes = [IsAdmin]
-
-# class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = Payment.objects.all().order_by('-timestamp')
-#     serializer_class = PaymentSerializer
-#     permission_classes = [IsAdmin]
-
-# class TaxpayerViewset(viewsets.ReadOnlyModelViewSet):
-#     queryset = TaxPayer.objects.all().order_by('-created_at')
-#     serializer_class = TaxPayerSerializer
-#     permission_classes = [IsAdmin]
+class AdminFinanceDashboardView(APIView):
+    pass

@@ -44,12 +44,8 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
-# --- The Ministry Data (TaxPayer/Vehicle Owner) ---
 class TaxPayer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    
-    # This is the link to the App Account. 
-    # It is NULL when uploaded by ministry, and FILLED when user registers/claims.
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="tax_payer_profile")
     
     full_name = models.CharField(max_length=100) 
