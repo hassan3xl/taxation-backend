@@ -21,7 +21,7 @@ class TaxPayer(models.Model):
 # --- Agent (If you need specific agent details) ---
 class Agent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.OneToOneField("users.", on_delete=models.CASCADE, related_name="agent_profile")
+    user = models.OneToOneField("users.User", on_delete=models.CASCADE, related_name="agent_profile")
     full_name = models.CharField(max_length=100)
     station_location = models.CharField(max_length=100, blank=True)
     

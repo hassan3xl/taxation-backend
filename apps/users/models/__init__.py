@@ -1,1 +1,4 @@
-from .users import User, Agent, TaxPayer
+from .users import User
+from .profiles import (
+     Agent, TaxPayer
+)

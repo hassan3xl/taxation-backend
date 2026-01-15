@@ -4,7 +4,9 @@ from .views import (
     # PaymentViewSet, 
     VehicleViewSet, 
     # TaxpayerViewset,
-    UsersViewset,
+    # UsersViewset,
+    PromoteToAgentView,
+    PotentialAgentsListView,
     AdminPaymentListView,
     AdminPaymentDetailView,
     AdminPaymentUpdateView,
@@ -18,10 +20,15 @@ router = DefaultRouter()
 router.register(r'vehicles', VehicleViewSet, basename='admin-vehicles')
 # router.register(r'payments', PaymentViewSet, basename='admin-payments')
 # router.register(r'taxpayers', TaxpayerViewset, basename='admin-taxpayers')
-router.register(r'users', UsersViewset, basename='admin-users')
+# router.register(r'users', UsersViewset, basename='admin-users')
 
 
 urlpatterns = [
+    
+    path('users/candidates/', PotentialAgentsListView.as_view(), name='agent_candidates'),
+    path('users/promote/', PromoteToAgentView.as_view(), name='promote_agent'),
+
+
     path('vehicles/<uuid:id>/approve/', VehicleViewSet.as_view({'post': 'approve_vehicle'}), name='approve-vehicle'),
     path("vehicles/finance/", AdminVehicleFinanceListView.as_view()),
 

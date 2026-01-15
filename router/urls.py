@@ -10,6 +10,7 @@ urlpatterns = [
     path('profile/', include(users_urls)),
     path('driver/', include('apps.drivers.urls')),
     path('admin/', include('apps.admins.urls')),
+    path('agent/', include('apps.agents.urls')),
 
 
     path('core/', include('apps.core.api.urls')),

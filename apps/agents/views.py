@@ -29,10 +29,7 @@ from apps.core.models import(
     Payment
 )
 from .serializers import (
-    PaymentSerializer,
-    AgentAndAdminVehicleSerializer, 
-    CreateVehicleSerializer,
-    VehicleFinanceSerializer
+    AgentVehicleSerializer
 )
 from utils.permissions import (
     IsAgent
@@ -40,9 +37,8 @@ from utils.permissions import (
 
 class AgentVehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
-    serializer_class = AgentAndAdminVehicleSerializer
+    serializer_class = AgentVehicleSerializer
     permission_classes = [IsAgent]
-    
     filter_backends = [filters.SearchFilter]
     search_fields = ['plate_number', 'phone_number']
     lookup_field = 'plate_number' 

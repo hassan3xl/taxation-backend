@@ -4,21 +4,6 @@ from apps.core.models import Payment, Vehicle
 from apps.users.models import (
     TaxPayer
 )
-from apps.core.api import (
-    AgentAndAdminVehicleSerializer
-)
-
-class CreateVehicleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Vehicle
-        fields = ['plate_number', 'owner_name', 'phone_number']
-
-
-class TaxPayerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TaxPayer
-        fields = ["full_name", "phone", "address", "created_at", "updated_at"]
-
 
 class PaymentSerializer(serializers.ModelSerializer):
     vehicle_plate = serializers.CharField(
