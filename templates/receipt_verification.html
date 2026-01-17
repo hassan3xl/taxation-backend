@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Receipt Verification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full text-center">
+      {% if valid %}
+      <div class="mb-4">
+        <div
+          class="h-20 w-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-12 w-12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+      </div>
+      <h1 class="text-2xl font-bold text-green-700 mb-2">Valid Receipt</h1>
+      <p class="text-gray-500 mb-6">This payment has been verified.</p>
+
+      <div class="text-left bg-gray-50 p-4 rounded border">
+        <p class="text-sm text-gray-500">Plate Number</p>
+        <p class="font-bold text-lg mb-2">{{ vehicle.plate_number }}</p>
+
+        <p class="text-sm text-gray-500">Amount</p>
+        <p class="font-bold text-lg mb-2">₦{{ payment.amount }}</p>
+
+        <p class="text-sm text-gray-500">Date</p>
+        <p class="font-medium mb-2">{{ payment.timestamp }}</p>
+
+        <p class="text-sm text-gray-500">Collected By</p>
+        <p class="font-medium">{{ agent }}</p>
+      </div>
+      {% else %}
+      <div class="mb-4">
+        <div
+          class="h-20 w-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-12 w-12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </div>
+      </div>
+      <h1 class="text-2xl font-bold text-red-700 mb-2">Invalid Receipt</h1>
+      <p class="text-gray-600">
+        This receipt reference could not be found or the payment failed.
+      </p>
+      {% endif %}
+    </div>
+  </body>
+</html>

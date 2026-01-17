@@ -20,10 +20,21 @@ class TaxPayer(models.Model):
 
 # --- Agent (If you need specific agent details) ---
 class Agent(models.Model):
+
+    ACTIVE_STATUS_CHOICES = [
+
+        ("active", "Active"),
+        ("inactive", "Inactive"),
+        ("suspended", "Suspended"),
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField("users.User", on_delete=models.CASCADE, related_name="agent_profile")
     full_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=100)
     station_location = models.CharField(max_length=100, blank=True)
+    active_status = models.CharField(max_length=100, choices=ACTIVE_STATUS_CHOICES, default="active")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return self.full_name
+        return self.user.email

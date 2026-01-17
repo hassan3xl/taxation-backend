@@ -11,8 +11,10 @@ from .views import (
     AdminPaymentDetailView,
     AdminPaymentUpdateView,
     AdminPaymentDeleteView,
-    AdminVehicleFinanceListView,
-    AdminFinanceDashboardView
+    AdminDashboardView,
+    AdminFinanceDashboardView,
+    AgentDetailView,
+    AgentListView
 )
 
 
@@ -28,9 +30,13 @@ urlpatterns = [
     path('users/candidates/', PotentialAgentsListView.as_view(), name='agent_candidates'),
     path('users/promote/', PromoteToAgentView.as_view(), name='promote_agent'),
 
-
+    # agents
+    path('agents/', AgentListView.as_view(), name='agent_list'),
+    path('agents/<uuid:id>/', AgentDetailView.as_view(), name='agent_detail'),
+    
+    # vehicles
     path('vehicles/<uuid:id>/approve/', VehicleViewSet.as_view({'post': 'approve_vehicle'}), name='approve-vehicle'),
-    path("vehicles/finance/", AdminVehicleFinanceListView.as_view()),
+    # path("vehicles/finance/", AdminVehicleFinanceListView.as_view()),
 
     # Payments
     path("payments/", AdminPaymentListView.as_view()),
@@ -40,7 +46,10 @@ urlpatterns = [
 
 
     # Dashboard
-    path("finance/dashboard/", AdminFinanceDashboardView.as_view()),
+    path("dashboard/", AdminDashboardView.as_view()),
+    path("dashboard/finance/", AdminFinanceDashboardView.as_view()),
+
+
 
 ]
 

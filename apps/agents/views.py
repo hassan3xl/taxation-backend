@@ -15,7 +15,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from apps.users.models import  (
     TaxPayer,
-    User
+    User,
+    Agent
 )
 from apps.users.api import (
     UserProfileSerializer
@@ -73,9 +74,9 @@ class AgentVehicleViewSet(viewsets.ModelViewSet):
     def pay(self, request, plate_number=None):
 
         vehicle = self.get_object()
-        
+        agent = Agent.objects.get(user=request.user)
         amount = request.data.get('amount')
-        agent_id = request.user
+        agent_id = agent
         
         if not amount:
             return Response({"error": "Amount is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -86,6 +87,7 @@ class AgentVehicleViewSet(viewsets.ModelViewSet):
             amount=amount,
             payment_method='agent',
             collected_by=agent_id,
+            payment_status='success',
             notes=f"Collected manually via Agent App"
         )
 

@@ -130,7 +130,11 @@ class RequestOTPView(APIView):
         # Send SMS to the database phone, NOT the user input phone
         send_sms_otp(vehicle.phone_number, otp)
 
-        return Response({"message": "OTP sent to your registered phone number."})
+        return Response({
+                "message": "OTP sent to your registered phone number.",
+                "otp for dev": otp}, 
+                status=status.HTTP_200_OK
+        )
 
 
 class VerifyOTPView(APIView):

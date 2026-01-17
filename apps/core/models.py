@@ -73,85 +73,48 @@ class Vehicle(models.Model):
     def days_since_activation(self):
         """
         Calculates calendar days since vehicle became active.
+        Delegated to VehicleFinanceService.
         """
-        if not self.activated_at:
-            return 0
-
-        today = timezone.now().date()
-        activation_date = self.activated_at.date()
-
-        delta = today - activation_date
-        days_active = delta.days + 1  # include today
-
-        activation_hour = timezone.localtime(self.activated_at).hour
-        if activation_hour >= 16:
-            days_active -= 1
-
-        return max(days_active, 0)
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.calculate_days_since_activation(self)
 
     @property
     def exempted_days_count(self):
         """
-        Calculates how many days this vehicle was 'excused' from tax
-        due to sickness, theft, or repairs.
+        Calculates how many days this vehicle was 'excused' from tax.
+        Delegated to VehicleFinanceService.
         """
-        approved_exemptions = self.exemptions.filter(is_approved=True)
-        total_days = 0
-        for exemption in approved_exemptions:
-            # We cap the end_date at 'today' to avoid calculating future exemptions
-            # that haven't happened yet, though usually exemptions are past/present.
-            end = min(exemption.end_date, timezone.now().date())
-            if end >= exemption.start_date:
-                duration = (end - exemption.start_date).days + 1
-                total_days += duration
-        return total_days
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.calculate_exemptions(self)
 
     @property
     def total_expected_revenue(self):
         """
         (Total Days - Excused Days) * Daily Rate
+        Delegated to VehicleFinanceService.
         """
-        if not self.is_active:
-            return 0
-            
-        # Use the smart logic above
-        chargeable_days = self.days_since_activation - self.exempted_days_count
-        
-        # Safety check to prevent negative bills
-        chargeable_days = max(chargeable_days, 0)
-        
-        return Decimal(chargeable_days) * self.daily_rate
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.calculate_expected_revenue(self)
 
     @property
     def total_paid(self):
         """Sum of all verified payments."""
-        result = self.payments.aggregate(total=Sum('amount'))
-        return result['total'] or 0.0
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.calculate_total_paid(self)
 
     @property
     def current_balance(self):
-        return Decimal(str(self.total_paid)) - Decimal(str(self.total_expected_revenue))
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.calculate_current_balance(self)
 
     @property
     def compliance_status(self):
         """
         Returns the status based on your 7-day rule.
+        Delegated to VehicleFinanceService.
         """
-        balance = self.current_balance
-        daily_rate = self.daily_rate
-        
-        # If balance is positive, they are good
-        if balance >= 0:
-            return "ACTIVE"
-            
-        # Check debt depth
-        # If they owe more than 7 days worth of tax:
-        debt_limit = -(daily_rate * 7)
-        
-        if balance < debt_limit:
-            return "INACTIVE_DUE_TO_DEBT" # The 7-day rule trigger
-        
-        return "OWING" # Owing, but less than 7 days (e.g. 2 days missed)
+        from apps.core.services.vehicle_finance import VehicleFinanceService
+        return VehicleFinanceService.get_compliance_status(self)
     
     
 # New Model for Sickness/Theft
@@ -190,17 +153,16 @@ class Payment(models.Model):
     vehicle = models.ForeignKey("core.Vehicle", related_name='payments', on_delete=models.CASCADE)
     driver = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='agent')
+    payment_method = models.CharField(max_length=100, choices=PAYMENT_METHODS, default='agent')
     refrence = models.CharField(max_length=100, blank=True, null=True)
-    # collected_by = models.CharField(max_length=100, blank=True, null=True, help_text="Agent ID if cash payment")
     collected_by = models.ForeignKey(
-        "users.User", 
+        "users.Agent", 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
         related_name="collected_payments"
     ) 
-    payment_status = models.CharField(max_length=20, choices=[
+    payment_status = models.CharField(max_length=100, choices=[
         ('pending', 'Pending'),
         ('success', 'Success'),
         ('failed', 'Failed'),

@@ -2,34 +2,26 @@ from rest_framework import serializers
 # from ..models import Vehicle, Payment
 from apps.core.models import Payment, Vehicle
 from apps.users.models import (
-    TaxPayer, User
+    TaxPayer, User, Agent
 )
 
-
-class UserListSerializer(serializers.ModelSerializer):
-    """ Used to list users so Admin can pick one to promote """
-    full_name = serializers.SerializerMethodField()
-    phone = serializers.SerializerMethodField()
-
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'full_name', 'phone', 'is_active']
+        fields = ['id', 'email', 'role', 'is_active']
 
-    def get_full_name(self, obj):
-        # Try to get name from TaxPayer profile, else fallback to User name
-        if hasattr(obj, 'tax_payer_profile') and obj.tax_payer_profile:
-            return obj.tax_payer_profile.full_name
-        return f"{obj.first_name} {obj.last_name}"
 
-    def get_phone(self, obj):
-        if hasattr(obj, 'tax_payer_profile') and obj.tax_payer_profile:
-            return obj.tax_payer_profile.phone
-        return "N/A"
+class AgentsSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Agent
+        fields = ['id', 'user', 'full_name', 'phone', 'station_location', 'active_status']
 
 class PromoteAgentSerializer(serializers.Serializer):
     """ Validate input for promoting a user """
     user_id = serializers.UUIDField()
     station_location = serializers.CharField(required=False, allow_blank=True)
+    
 class CreateVehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
